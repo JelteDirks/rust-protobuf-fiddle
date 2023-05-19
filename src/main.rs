@@ -1,7 +1,7 @@
 use dotenv;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::env;
+use std::{env, dbg};
 use tungstenite::connect;
 use url::Url;
 
@@ -33,8 +33,26 @@ fn main() {
 
     let obj: AuthResponse = serde_json::from_str(as_str).unwrap();
 
-    dbg!(msg);
-    dbg!(obj);
+    dbg!(&msg);
+    dbg!(&obj);
+
+    let (mut rts_socket, _) = connect(Url::parse(REALTIME_ADDRESS).unwrap()).unwrap();
+
+    let rts_json = json!({
+        "session_id": "$SESSIONID",
+        "version": 5
+    });
+    let rts_string = rts_json.to_string();
+    let rts_string = rts_string.replace("$SESSIONID", &obj.data.session_id);
+
+    dbg!(&rts_string);
+
+    rts_socket.write_message(tungstenite::Message::Text(rts_string)).unwrap();
+
+    loop {
+        let msg = rts_socket.read_message();
+        dbg!(&msg.unwrap().to_string());
+    }
 }
 
 #[derive(Deserialize, Serialize, Debug)]
