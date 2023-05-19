@@ -1,7 +1,9 @@
 use dotenv;
+use protofish::decode::UnknownValue;
+use protofish::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::{env, dbg};
+use std::{dbg, env, path::PathBuf};
 use tungstenite::connect;
 use url::Url;
 
@@ -47,11 +49,36 @@ fn main() {
 
     dbg!(&rts_string);
 
-    rts_socket.write_message(tungstenite::Message::Text(rts_string)).unwrap();
+    rts_socket
+        .write_message(tungstenite::Message::Text(rts_string))
+        .unwrap();
+
+    let proto_files: Vec<String> = glob::glob("./**/*.proto")
+        .unwrap()
+        .map(|file| {
+            dbg!(&file);
+            return file.unwrap().as_path().to_str().unwrap().to_string();
+        })
+        .collect();
+
+    prost_build::compile_protos(&["message.proto"], &["./"]).unwrap();
 
     loop {
         let msg = rts_socket.read_message();
+
         dbg!(&msg.unwrap().to_string());
+    }
+}
+
+pub mod deez {
+    pub mod items {
+        include!(concat!("../generated", "/_.rs"));
+    }
+    pub mod wpe {
+        include!(concat!("../generated", "/com.wirepas.proto.wnt.rs"));
+    }
+    pub mod wnt {
+        include!(concat!("../generated", "/com.wirepas.proto.wpe.rs"));
     }
 }
 
